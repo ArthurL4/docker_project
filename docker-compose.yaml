@@ -1,0 +1,137 @@
+
+services:
+
+  #################
+  # SERVICE REDIS #
+  #################
+  redis-backend:
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+
+    volumes:
+      - redis_volume:/data
+
+    networks:
+      - ${NETWORK_BACKEND}
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+
+  ####################
+  # SERVICE POSTGRES #
+  ####################
+  postgres-backend:
+    build:
+      context: ./postgreSQL
+      dockerfile: Dockerfile
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+    volumes:
+      - postgres_volume:/var/lib/postgresql
+
+    networks:
+      - ${NETWORK_BACKEND}
+
+    env_file:
+      - ./postgreSQL/env_file
+
+    secrets:
+      - source: postgres.passwd
+        target: postgres-passwd
+
+
+  ####################
+  # SERVICE PYTHON   #
+  ####################
+  vote:
+    depends_on:
+      redis-backend:
+        condition: service_healthy
+
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+
+    ports:
+      - "5000:5000"
+
+    networks:
+      - ${NETWORK_BACKEND}
+      - ${NETWORK_FRONTEND}
+
+
+  ####################
+  # SERVICE .NET     #
+  ####################
+  worker:
+    depends_on:
+      redis-backend:
+        condition: service_healthy
+      postgres-backend:
+        condition: service_healthy
+
+    build:
+      context: ./net
+      dockerfile: Dockerfile
+
+    networks:
+      - ${NETWORK_BACKEND}
+
+
+  ####################
+  # SERVICE NODE     #
+  ####################
+  result:
+    depends_on:
+      postgres-backend:
+        condition: service_healthy
+
+    build:
+      context: ./node
+      dockerfile: Dockerfile
+
+    networks:
+      - ${NETWORK_FRONTEND}
+      - ${NETWORK_BACKEND}
+
+    ports:
+      - "3000:3000"
+
+
+####################
+# SECRETS          #
+####################
+secrets:
+  postgres.passwd:
+    file: ${POSTGRES_PASSWORD}
+
+
+####################
+# NETWORKS         #
+####################
+networks:
+  backend:
+    driver: bridge
+
+  frontend:
+    driver: bridge
+
+
+####################
+# VOLUMES          #
+####################
+volumes:
+  redis_volume:
+  postgres_volume:

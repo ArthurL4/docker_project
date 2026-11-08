@@ -1,0 +1,4 @@
+redis.port=5432
+volume.path.ge.18=/var/lib/postgresql
+volume.path.le.17=/var/lib/postgresql/data
+doc.info=https://hub.docker.com/_/postgres
