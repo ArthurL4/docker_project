@@ -21,6 +21,11 @@ Vagrant.configure("2") do |config|
         # Faire en sorte que les machines puissent communiquer entre elles via leur hostnames (exemple: ping worker1 depuis manager1)
         #{NODES.map{ |n_name, ip| "echo '#{ip} #{n_name}' | sudo tee -a /etc/hosts\n"}.join}
 
+
+
+#POUR RAJOUTER LE REPO DE DOCKER ENGINE -> https://docs.docker.com/engine/install/ubuntu/
+#PERMET D INSTALLER DOCKER ENGINE donc pas la version desktop, sur les VM directement, ça installer docker, docker-cli et docker-compose et docker-buildx
+
       # Add Docker's official GPG key:
         sudo apt remove $(dpkg --get-selections docker.io docker-compose docker-compose-v2 docker-doc docker-buildx podman-docker containerd runc | cut -f1)
         sudo apt update
@@ -29,6 +34,8 @@ Vagrant.configure("2") do |config|
         sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
         sudo chmod a+r /etc/apt/keyrings/docker.asc
 
+
+## Add the repository to Apt sources:
 sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
 URIs: https://download.docker.com/linux/ubuntu
