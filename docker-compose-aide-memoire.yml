@@ -1,0 +1,160 @@
+# AIDE-MEMOIRE DOCKER COMPOSE / SWARM
+# Chaque cle a un exemple de valeur.
+# Les lignes commencant par # sont des exemples OPTIONNELS.
+# C'est une fiche de reference : ne decommenter que ce dont tu as besoin.
+# Pour Swarm : docker stack deploy -c docker-compose-aide-memoire.yml demo
+
+services:
+  web:                              # nom du service
+    image: nginx:alpine             # image a utiliser
+    # build: ./web                  # construire depuis un Dockerfile (docker compose, PAS stack deploy)
+    # container_name: mon-web       # nom fixe (Compose local, pas pour replicas Swarm)
+    # command: ["nginx", "-g", "daemon off;"]  # commande lancee
+    # entrypoint: ["/docker-entrypoint.sh"]     # point d'entree
+    # working_dir: /app             # dossier de travail du conteneur
+    # user: "1000:1000"             # UID:GID dans le conteneur
+    # read_only: true               # filesystem racine en lecture seule
+
+    ports:
+      - "8080:80"                   # port publie sur les nodes : port conteneur
+      # - target: 80                # port dans le conteneur
+      #   published: 8081           # port sur les nodes
+      #   protocol: tcp             # tcp ou udp
+      #   mode: ingress             # ingress (routing mesh) ou host
+    # expose:
+    #   - "80"                     # port interne, sans publication sur l'hote
+
+    # environment:
+    #   APP_ENV: production         # variable d'environnement
+    #   DEBUG: "false"              # valeur textuelle
+    # env_file:
+    #   - ./web.env                 # variables lues depuis un fichier
+
+    # volumes:
+    #   - app_data:/app/data        # volume nomme -> chemin conteneur
+    #   - /srv/shared:/mnt/shared   # bind mount sur le NODE, pas sur Windows
+    # tmpfs:
+    #   - /tmp                      # stockage temporaire en memoire
+
+    networks:
+      - app_net                     # reseau utilise par le service
+    # dns:
+    #   - 1.1.1.1                   # serveur DNS externe personnalise
+    # extra_hosts:
+    #   - "intranet:192.168.99.10"  # entree /etc/hosts
+
+    # configs:
+    #   - source: nginx_config      # config declaree plus bas
+    #     target: /etc/nginx/nginx.conf  # chemin dans le conteneur
+    # secrets:
+    #   - source: api_password      # secret declare plus bas
+    #     target: api_password      # fichier /run/secrets/api_password
+
+    # healthcheck:
+    #   test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+    #   interval: 30s              # frequence du test
+    #   timeout: 5s                # attente maximale
+    #   retries: 3                 # nombre d'echecs
+    #   start_period: 10s          # grace au demarrage
+
+    # logging:
+    #   driver: json-file          # pilote de logs
+    #   options:
+    #     max-size: "10m"          # taille maximale d'un fichier
+    #     max-file: "3"            # nombre de fichiers conserves
+    # labels:
+    #   projet: demo               # etiquette du conteneur
+    # cap_drop:
+    #   - ALL                      # retire les capacites Linux
+    # cap_add:
+    #   - NET_BIND_SERVICE         # ajoute une capacite si necessaire
+    # security_opt:
+    #   - no-new-privileges:true   # bloque l'escalade de privileges
+
+    deploy:                         # orchestration (Swarm)
+      mode: replicated              # replicated ou global
+      replicas: 2                   # nb de tasks desirees (pas avec global)
+      endpoint_mode: vip            # vip ou dnsrr (dnsrr incompatible avec ingress)
+      # labels:
+      #   equipe: infra            # etiquette du SERVICE Swarm
+
+      placement:
+        constraints:
+          - node.role == worker     # placement uniquement sur workers
+          # - node.hostname == worker1      # cibler un node precis
+          # - node.labels.zone == europe   # utiliser un label de node
+        # preferences:
+        #   - spread: node.labels.zone      # repartir entre les zones
+
+      resources:
+        reservations:               # ressources prises en compte par le scheduler
+          cpus: "0.10"              # CPU reserve par task
+          memory: 32M               # memoire reservee par task
+        limits:                     # plafonds reels par conteneur
+          cpus: "0.50"              # plafond CPU
+          memory: 128M              # plafond memoire
+
+      restart_policy:
+        condition: on-failure       # none / on-failure / any
+        delay: 5s                   # attente avant remplacement
+        max_attempts: 3            # nb d'echecs toleres
+        window: 120s               # periode de validation d'une tentative
+
+      update_config:
+        parallelism: 1              # tasks mises a jour simultanement
+        delay: 10s                  # attente entre les groupes
+        order: start-first          # start-first ou stop-first
+        failure_action: rollback    # pause / continue / rollback
+        monitor: 30s                # surveillance apres mise a jour
+        max_failure_ratio: 0.0      # proportion d'echecs toleree
+
+      rollback_config:
+        parallelism: 1              # tasks restaurees simultanement
+        delay: 5s                   # attente entre les groupes
+        order: stop-first           # stop-first ou start-first
+        failure_action: pause       # pause ou continue
+        monitor: 30s                # surveillance apres rollback
+        max_failure_ratio: 0.0      # proportion d'echecs toleree
+
+    # restart: unless-stopped       # Compose local ; utiliser deploy.restart_policy avec Swarm
+    # depends_on:
+    #   - redis                     # ordre de creation en Compose local, pas d'ordre garanti Swarm
+    # profiles:
+    #   - dev                       # profil Compose local (pas un mecanisme Swarm)
+
+networks:
+  app_net:
+    driver: overlay                 # reseau multi-node Swarm
+    # attachable: true              # autorise aussi les conteneurs autonomes
+    # internal: true                # reseau isole de l'exterieur
+    # external: true                # reseau deja existant, ne pas le creer
+
+# Decommenter ce bloc et la ligne volumes du service pour utiliser un volume.
+# volumes:
+#   app_data:
+#     driver: local                 # volume local au node Docker
+#     # driver_opts:
+#     #   type: nfs                 # montage d'un stockage NFS
+#     #   o: "addr=192.168.99.103,nfsvers=4,rw"  # options de montage
+#     #   device: ":/srv/nfs/shared"             # export NFS du serveur
+
+# Decommenter avec l'utilisation de configs: dans le service.
+# configs:
+#   nginx_config:
+#     file: ./config/nginx.conf     # fichier source sur Windows (cote CLI)
+#     # external: true             # config deja creee dans Swarm
+
+# Decommenter avec l'utilisation de secrets: dans le service.
+# secrets:
+#   api_password:
+#     file: ./secrets/api_password.txt  # source lue cote CLI Windows
+#     # external: true             # secret deja cree dans Swarm
+
+# RAPPELS :
+# docker compose up -d                      -> Compose sur un Engine
+# docker --context manager1 stack deploy -c docker-compose-aide-memoire.yml demo
+# docker --context manager1 stack services demo
+# docker --context manager1 stack ps demo
+# docker --context manager1 stack rm demo
+# .env sert notamment a l'interpolation ${VARIABLE}; env_file injecte des variables au conteneur.
+# En mode Swarm, les images personnalisees doivent etre disponibles sur les nodes (registry).
