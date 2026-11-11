@@ -1,0 +1,281 @@
+
+services:
+
+  #################
+  # SERVICE REDIS #
+  #################
+  redis-backend:
+
+    image: redis:1.0.0
+
+    volumes:
+      - redis_volume:/data
+
+    networks:
+      - backend
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+    #redis.io/docs/latest/develop/get-started/faq/ -> redis empreinte mémoire
+    deploy:
+      mode: replicated #On indique le nombre que l'on veut vs global où une instance se trouve sur chaque noeud
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.20"
+          memory: 32M
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+      restart_policy:
+        condition: on-failure # -> restart un nouveau conteneur si il se termine par un code de sortie != de 0 sinon on le relance pas
+        delay: 15s
+        max_attempts: 5
+        window: 60s
+
+      update_config:
+        parallelism: 1 #nb de conteneur possible à mettre à jour en même temps
+        order: stop-first 
+        delay: 15s #on att 15sec avant la prochaine update du groupe suivant
+        failure_action: rollback
+        monitor: 60s    #surveillance 60sec pour voir si update fail ou pas
+
+
+      rollback_config:
+        parallelism: 1
+        order: stop-first #ici on stop l'update de suite car si rollback potentiellement le conteneur est défaillant ou bien si je demande un rollback genre docker service rollback serviceX
+        failure_action: continue
+        monitor: 60s
+        delay: 15s
+
+
+  ####################
+  # SERVICE POSTGRES #
+  ####################
+  postgres-backend:
+    
+    image: postgres:1.0.0
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+    volumes:
+      - postgres_volume:/var/lib/postgresql
+
+    networks:
+      - backend
+
+    env_file:
+      - ../postgreSQL/env_file
+
+    secrets:
+      - source: postgres.passwd
+        target: postgres-passwd
+
+    deploy:
+      mode: replicated 
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.20"
+          memory: 32M
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+      restart_policy:
+        condition: on-failure 
+        delay: 15s
+        max_attempts: 5
+        window: 60s
+
+      update_config:
+        parallelism: 1 
+        order: stop-first 
+        delay: 15s
+        failure_action: rollback
+        monitor: 60s   
+
+
+      rollback_config:
+        parallelism: 1
+        order: stop-first 
+        failure_action: continue
+        monitor: 60s
+        delay: 15s
+
+
+  ####################
+  # SERVICE PYTHON   #
+  ####################
+  vote:
+
+    image: vote:1.0.0
+
+    ports:
+      - "5000:5000"
+
+    networks:
+      - backend
+      - frontend
+
+    deploy:
+      mode: replicated 
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.20"
+          memory: 32M
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+      restart_policy:
+        condition: on-failure 
+        delay: 15s
+        max_attempts: 5
+        window: 60s
+
+      update_config:
+        parallelism: 1 
+        order: stop-first 
+        delay: 15s
+        failure_action: rollback
+        monitor: 60s   
+
+
+      rollback_config:
+        parallelism: 1
+        order: stop-first 
+        failure_action: continue
+        monitor: 60s
+        delay: 15s
+
+
+  ####################
+  # SERVICE .NET     #
+  ####################
+  worker:
+
+    image: worker:1.0.0
+
+    networks:
+      - backend
+
+    deploy:
+      mode: replicated 
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.20"
+          memory: 32M
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+      restart_policy:
+        condition: on-failure 
+        delay: 15s
+        max_attempts: 5
+        window: 60s
+
+      update_config:
+        parallelism: 1 
+        order: stop-first 
+        delay: 15s
+        failure_action: rollback
+        monitor: 60s   
+
+
+      rollback_config:
+        parallelism: 1
+        order: stop-first 
+        failure_action: continue
+        monitor: 60s
+        delay: 15s
+
+
+  ####################
+  # SERVICE NODE     #
+  ####################
+  result:
+
+    image: result:1.0.0
+
+    networks:
+      - frontend
+      - backend
+
+    ports:
+      - "3000:3000"
+
+    deploy:
+      mode: replicated 
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.20"
+          memory: 32M
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+      restart_policy:
+        condition: on-failure 
+        delay: 15s
+        max_attempts: 5
+        window: 60s
+
+      update_config:
+        parallelism: 1 
+        order: stop-first 
+        delay: 15s
+        failure_action: rollback
+        monitor: 60s   
+
+
+      rollback_config:
+        parallelism: 1
+        order: stop-first 
+        failure_action: continue
+        monitor: 60s
+        delay: 15s
+
+
+####################
+# SECRETS          #
+####################
+secrets:
+  postgres.passwd:
+    file: ../postgreSQL/postgres-passwd
+
+
+####################
+# NETWORKS         #
+####################
+
+##Je bascule déjà les réseaux sur overlay pour permettre aux VM de communiquer entre les différents conteneur docker.
+networks:
+  backend:
+    driver: overlay
+
+  frontend:
+    driver: overlay
+
+
+####################
+# VOLUMES          #
+####################
+volumes:
+  redis_volume:
+  postgres_volume:
