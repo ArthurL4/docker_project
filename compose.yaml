@@ -1,0 +1,132 @@
+services:
+  redis:
+    image: redis:7.2-alpine
+    # Persistance AOF
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - redis-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+  db:
+    image: postgres:16.0-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - db-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256M
+
+  vote:
+    build:
+      context: ./vote
+    image: voting-app-vote:1.0.0
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+    ports:
+      - "8080:8080"
+    networks:
+      - redis-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+  worker:
+    build:
+      context: ./worker
+    image: voting-app-worker:1.0.0
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+      - DB_CONNECTION_STRING=Server=db;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Database=${POSTGRES_DB};
+    networks:
+      - redis-net
+      - db-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    healthcheck:
+      # pas de port HTTP on verifie le processus
+      test: ["CMD", "pgrep", "-f", "Worker.dll"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  result:
+    build:
+      context: ./result
+    image: voting-app-result:1.0.0
+    restart: always
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+    ports:
+      - "8888:8888"
+    networks:
+      - db-net
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8888"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+volumes:
+  redis_data:
+  db_data:
+
+networks:
+  # vote, worker, redis
+  redis-net:
+    driver: bridge
+  # worker, result, db
+  db-net:
+    driver: bridge
