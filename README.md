@@ -136,7 +136,7 @@ config.vm.synced_folder  "../", "/project"
 ````
 
 Autrement dit, vous pouvez accéder au projet depuis l'environnement de la VM sans passer par `docker context` depuis la machine hôte.
- - Si vous utilisez `docker context use context_manager` et que vous vous connectez en `SSH`, alors vous pouvez directement utiliser la commande suivante: `docker stack deploy -c ./docker-compose.yaml project` **à condition d'avoir bien build les images avant de chaque services**.
+ - Si vous utilisez `docker context use context_manager` et que vous vous connectez en `SSH`, alors vous pouvez directement utiliser la commande suivante: `docker stack deploy -c ./docker-compose.yaml project` **à condition d'avoir bien build les images avant de chaque services** dans les différents VM.
  - Sinon, il vous faut donc créer les images dans chaque VM comme indiqué précédemment puis ensuite lancer  `docker stack deploy -c /project/swarm/docker-compose.yaml project` depuis `manager1`.
 
 
