@@ -21,7 +21,9 @@ Le projet contient l'arborescence suivante:
 
 ## Exécution
 
-Le projet se lance depuis la racine avec la commande `docker compose up --build`, qui exécute le fichier `docker-compose.yaml`.
+Le projet se lance depuis la racine avec la commande `docker compose up --build`, qui exécute le fichier `docker-compose.yaml`. 
+
+**ATTENTION** : il y a deux fichiers `docker-compose.yaml`, celui dans le dossier `swarm` ne doit pas être lancé avec `docker-compose up --build`.
 
 Les dossiers `net/`, `node/`, `postgreSQL/`, `python/` et `redis` correspondent chacun à un service du `docker-compose.yaml`. Chaque dossier dispose de son fichier `Dockerfile` ainsi que du dossier contenant le code du service associé. Les fichiers `.info` sont des métadonnées à titre d'information et n'ont pas d'utilité.
 
@@ -89,7 +91,7 @@ volumes:
 ````
 
 
-Concernant le service python, nous avons utilisé l'utilitaire`uv`, aussi le fichier `requirements.txt` a été remplacé au profit d'un fichier `pyproject.toml` qui permet une approche plus moderner de l'usage de python.
+Concernant le service python, nous avons utilisé l'utilitaire`uv`, aussi le fichier `requirements.txt` a été remplacé au profit d'un fichier `pyproject.toml` qui permet une approche plus moderne de l'usage de python.
 
 Cela nous a permis également de produire notamment pour le service `worker` et `vote` des fichiers `Dockerfile` multistage.
 
@@ -103,7 +105,7 @@ Concernant la partie `swarm`, le projet dispose d'un dossier `swarm`:
 	- `init.bat`
 	- `Vagrantfile`
 
-En se déplaçant dans le dossier `swarm/` il est possible d'exécuter `./init.bat` pour déployer le `swarm` depuis un environnement `Windows` disposant de `WSL2`et de `Oracle VirtualBox`. 
+En se déplaçant dans le dossier `swarm/` il est possible d'exécuter `./init.bat` pour déployer le `swarm` depuis un environnement `Windows` disposant de `WSL2`, de `Oracle VirtualBox` ainsi que de `Vagrant`.
 
 Le fichier `init.bat` exécute séquentiellement les actions requises au déploiement du `swarm`.
 
@@ -112,12 +114,12 @@ Le dossier dispose de son propre fichier `docker-compose.yaml`, **IL N EST EN AU
 Cela étant dit, afin de le faire à la main, il convient de suivre les étapes suivantes:
 
 - Se déplacer dans le dossier `swarm`
-- Lancer la commande `vagrant up`, celle-ci lance le script ruby dans Vagrantfile pour préparer les machines virtuelles (`winget install -e --id Hashicorp.Vagrant` pour installer vagrant sur windows si il n'est pas présent)
+- Lancer la commande `vagrant up`, celle-ci lance le script ruby dans `Vagrantfile` pour préparer les machines virtuelles (`winget install -e --id Hashicorp.Vagrant` pour installer `vagrant` sur windows si il n'est pas présent)
 - Attendre la création des machines virtuelles
 - Se connecter au manager avec la commande `vagrant ssh manager1` et exécuter la commande `docker swarm init --advertise-addr 192.168.99.100` dans la machine virtuelle du `manager1`
 - Copier le token qui est fourni par le `manager1`pour se connecter à son cluster.
 - Quitter le `manager1`avec `exit`
-- Se connecter respectivement sur chacun des workers avec `vagrant ssh worker1`, puis `vagrant ssh worker2` et exécuter la commande  `docker swarm join --token %TOKEN% 192.168.99.100:2377`, %TOKEN% étant celui que vous avez préalablement copié durant la phase avec `manager1` afin de se connecter au cluster.
+- Se connecter respectivement sur chacun des workers avec `vagrant ssh worker1`, puis `vagrant ssh worker2` et exécuter la commande  `docker swarm join --token %TOKEN% 192.168.99.100:2377`, **%TOKEN%** étant celui que vous avez préalablement copié durant la phase avec `manager1` afin de se connecter au cluster.
 - Vérifier l'état du cluster en se connectant sur `vagrant ssh manager1` puis `docker node ls`.
 - A partir de là, il y a deux solutions, soit vous utilisez `docker context` pour créer un `context` de connexion à `manager1` à travers `ssh`: => `docker context create context_manager --docker "host=ssh://vagrant@192.168.99.100"`. Cela implique de disposer du client `OpenSSH`, de charger la clé privée pour `manager1` avec `ssh-add path/to/secreyKey`, clé que vous pouvez retrouver grâce à `vagrant ssh-config manager1`. Soit vous vous connectez sur `vagrant ssh manager1`, puis `worker1`, puis `worker2` et vous lancez les commandes pour construire chaque images avant de déployer la stack depuis `manager1`.
 
@@ -179,7 +181,7 @@ Nous aurions pu le changer également dans le `docker-compose.yaml` quand on lan
 **Il n'est donc plus nécessaire d'aller build les images une par une sur chaque VM.** en ce qui concerne `docker swarm`.
 
 
-**ATTENTION**: sur un cluster si un shutdown un service et qu'il est redéployé sur une autre VM qui ne dispose donc pas du volume initiale qui a été utilisé par une base, les données ne seront donc pas accessibles sur cette nouvelle VM:
+**ATTENTION**: sur un cluster si l'on shutdown un service et qu'il est redéployé sur une autre VM qui ne dispose donc pas du volume initial qui a été utilisé par une base, les données ne seront donc pas accessibles sur cette nouvelle VM:
 
 une solution ici serait un système de replicat des données des bases ou bien alors d'utiliser une 4eme VM qui dispose d'un espace de stockage partagé avec NFS par exemple (Network File System) ou bien un système de stockage en cloud par exemple.
 
