@@ -129,6 +129,7 @@ services:
       - backend
       - frontend
 
+
     deploy:
       mode: replicated 
       replicas: 1
