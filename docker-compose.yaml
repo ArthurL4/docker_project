@@ -22,6 +22,12 @@ services:
       retries: 5
       start_period: 10s
 
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 
   ####################
   # SERVICE POSTGRES #
@@ -51,6 +57,12 @@ services:
       - source: postgres.passwd
         target: postgres-passwd
 
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 
   ####################
   # SERVICE PYTHON   #
@@ -71,6 +83,12 @@ services:
       - ${NETWORK_BACKEND}
       - ${NETWORK_FRONTEND}
 
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 
   ####################
   # SERVICE .NET     #
@@ -88,6 +106,12 @@ services:
 
     networks:
       - ${NETWORK_BACKEND}
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 
   ####################
@@ -108,6 +132,12 @@ services:
 
     ports:
       - "3000:3000"
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 
 ####################
