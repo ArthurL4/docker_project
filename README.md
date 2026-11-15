@@ -136,15 +136,50 @@ config.vm.synced_folder  "../", "/project"
 ````
 
 Autrement dit, vous pouvez accéder au projet depuis l'environnement de la VM sans passer par `docker context` depuis la machine hôte.
- - Si vous utilisez `docker context use context_manager` et que vous vous connectez en `SSH`, alors vous pouvez directement utiliser la commande suivante: `docker stack deploy -c ./docker-compose.yaml project` **à condition d'avoir bien build les images avant de chaque services** dans les différents VM.
+ - Si vous utilisez `docker context use context_manager` et que vous vous connectez en `SSH`, alors vous pouvez directement utiliser la commande suivante: `docker stack deploy -c ./docker-compose.yaml project` **à condition d'avoir bien build les images avant de chaque services** dans les différentes VM.
  - Sinon, il vous faut donc créer les images dans chaque VM comme indiqué précédemment puis ensuite lancer  `docker stack deploy -c /project/swarm/docker-compose.yaml project` depuis `manager1`.
 
 
 Une solution élégante serait de créer des dépôts sur `docker hub` afin d'y stocker nos images Docker, puis de les récupérer depuis chacune des machines virtuelles à l'aide de la commande suivante : `docker pull monrepo/monimage:1.0.0` pour éviter de créer les images dans chaque VM à chaque fois.
 
 
+Pour vérifier l'état du swarm vous pouvez vous connecter sur `vagrant ssh manager1`:
+
+- `docker node ls` -> voir les noeuds actifs
+- `docker service ls` -> voir les services actifs
+- `docker node ps` -> voir les services actifs pour ce noeuds 
+- `docker node ps nodeName` -> voir les services actifs pour ce noeud
+- `docker node update --availability drain manager1` -> render manager1 indisponible et shutdown ses services pour voir si c'est bien redéployé sur les autres workers.
+ 
 
 
+**uptade**:
+
+Nous avons crée un répertoire sur `docker hub` -> https://hub.docker.com/r/arthure3/3dokr
+
+Celui-ci contient toutes les images notamment pour éviter à chaque noeud du cluster de devoir build chaque image, donc mtn il pull directement les images depuis notre répertoire:
 
 
+- `arthure3/3dokr:redis-backend-1.0.0`
+- `arthure3/3dokr:postgres-backend-1.0.0`
+- `arthure3/3dokr:vote-1.0.0`
+- `arthure3/3dokr:result-1.0.0`
+- `arthure3/3dokr:worker-1.0.0`
+
+
+ex: 
+
+```yaml
+redis-backend:
+    image: arthure3/3dokr:redis-backend-1.0.0
+```
+
+Nous aurions pu le changer également dans le `docker-compose.yaml` quand on lance `docker compose up`  mais on a laissé le tag `build` avec le contexte du fichier `Dockerfile` de chaque service pour bien faire la disctintion entre les deux déploiements.
+
+**Il n'est donc plus nécessaire d'aller build les images une par une sur chaque VM.** en ce qui concerne `docker swarm`.
+
+
+**ATTENTION**: sur un cluster si un shutdown un service et qu'il est redéployé sur une autre VM qui ne dispose donc pas du volume initiale qui a été utilisé par une base, les données ne seront donc pas accessibles sur cette nouvelle VM:
+
+une solution ici serait un système de replicat des données des bases ou bien alors d'utiliser une 4eme VM qui dispose d'un espace de stockage partagé avec NFS par exemple (Network File System) ou bien un système de stockage en cloud par exemple.
 

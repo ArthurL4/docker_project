@@ -21,27 +21,6 @@ vagrant ssh worker2 -c "docker swarm join --token %TOKEN% 192.168.99.100:2377"
 REM on verifie mtn que tous les noeuds sont dispos depuis la machine hôtes
 vagrant ssh manager1 -c "docker node ls"
 
-REM on cree toutes les images pour pouvoir les lancer dans le cluster
-vagrant ssh manager1 -c "docker build -t redis:1.0.0 /project/redis/"
-vagrant ssh manager1 -c "docker build -t postgres:1.0.0 /project/postgreSQL/"
-vagrant ssh manager1 -c "docker build -t result:1.0.0 /project/node/"
-vagrant ssh manager1 -c "docker build -t vote:1.0.0 /project/python/"
-vagrant ssh manager1 -c "docker build -t worker:1.0.0 /project/net/"
-
-REM on cree toutes les images pour pouvoir les lancer dans le cluster
-vagrant ssh worker1 -c "docker build -t redis:1.0.0 /project/redis/"
-vagrant ssh worker1 -c "docker build -t postgres:1.0.0 /project/postgreSQL/"
-vagrant ssh worker1 -c "docker build -t result:1.0.0 /project/node/"
-vagrant ssh worker1 -c "docker build -t vote:1.0.0 /project/python/"
-vagrant ssh worker1 -c "docker build -t worker:1.0.0 /project/net/"
-
-REM on cree toutes les images pour pouvoir les lancer dans le cluster
-vagrant ssh worker2 -c "docker build -t redis:1.0.0 /project/redis/"
-vagrant ssh worker2 -c "docker build -t postgres:1.0.0 /project/postgreSQL/"
-vagrant ssh worker2 -c "docker build -t result:1.0.0 /project/node/"
-vagrant ssh worker2 -c "docker build -t vote:1.0.0 /project/python/"
-vagrant ssh worker2 -c "docker build -t worker:1.0.0 /project/net/"
-
 
 REM enfin on lancer notre docker-compose.yaml
 vagrant ssh manager1 -c "docker stack deploy -c /project/swarm/docker-compose.yaml project"

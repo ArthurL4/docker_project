@@ -6,7 +6,7 @@ services:
   #################
   redis-backend:
 
-    image: redis:1.0.0
+    image: arthure3/3dokr:redis-backend-1.0.0
 
     volumes:
       - redis_volume:/data
@@ -60,7 +60,7 @@ services:
   ####################
   postgres-backend:
     
-    image: postgres:1.0.0
+    image: arthure3/3dokr:postgres-backend-1.0.0
 
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
@@ -120,7 +120,7 @@ services:
   ####################
   vote:
 
-    image: vote:1.0.0
+    image: arthure3/3dokr:vote-1.0.0
 
     ports:
       - "5000:5000"
@@ -168,7 +168,7 @@ services:
   ####################
   worker:
 
-    image: worker:1.0.0
+    image: arthure3/3dokr:worker-1.0.0
 
     networks:
       - backend
@@ -211,7 +211,7 @@ services:
   ####################
   result:
 
-    image: result:1.0.0
+    image: arthure3/3dokr:result-1.0.0
 
     networks:
       - frontend
